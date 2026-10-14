@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Design Summit 2026 – Org Chart</title>
-
+<title>Design Summit 2026 – Org Chart Admin</title>
+<meta name="robots" content="noindex" />
 <meta name="theme-color" content="#000000" />
 <link rel="apple-touch-icon" href="icons/icon-180.png" />
 <link rel="icon" href="icons/icon-192.png" type="image/png" />
@@ -12,117 +12,187 @@
 </head>
 <body>
 
-<!-- ======================= LIEFERANTEN-ANSICHT =======================
-     Die IDs/Klassen beginnen noch mit "k" (frueher Kiosk-Modus auf dem iPad).
-     Heute ist das die Seite, die Lieferanten ueber den Link oeffnen. -->
-<div class="screen" id="kioskScreen">
-  <header class="k-top">
-    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 13v22M13 24h22" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
+<!-- Auswertung der Lieferanten-Dateien. Alle Daten liegen nur in diesem
+     Browser; auf GitHub liegt ausschliesslich das Werkzeug. -->
+<div class="screen" id="adminScreen">
+  <header class="a-top">
+    <svg style="width:34px;height:34px;flex:0 0 auto" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 13v22M13 24h22" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
     <div>
       <div class="ttl" data-i18n="app.name">Design Summit 2026</div>
-      <div class="sub" data-i18n="app.tag">Team, skills &amp; responsibilities</div>
+      <div class="sub" data-i18n="app.tag">Org chart admin</div>
     </div>
     <div class="right">
       <div class="langsw" role="group" aria-label="Language">
         <button type="button" data-lang="en">EN</button>
         <button type="button" data-lang="de">DE</button>
       </div>
+      <a class="btn btn-ghost" id="btnOpenForm" target="_blank" rel="noopener" data-i18n="a.openForm">Open supplier form</a>
+      <button class="btn btn-ghost" id="btnCopyLink" data-i18n="a.copyLink">Copy supplier link</button>
     </div>
   </header>
 
-  <!-- Fortschritt: immer sichtbar, solange eine Firma angelegt ist -->
-  <div class="k-steps hidden" id="kSteps">
-    <div class="k-step" id="kStep1">
-      <span class="num">1</span>
-      <div class="st"><b data-i18n="k.step1">Add your team</b><span id="kStepCount"></span></div>
-    </div>
-    <span class="k-arrow" aria-hidden="true">→</span>
-    <div class="k-step" id="kStep2">
-      <span class="num">2</span>
-      <div class="st"><b data-i18n="k.step2">Send us your file</b><span id="kSendState"></span></div>
-    </div>
-    <button class="btn btn-coral btn-lg" id="kSend" data-i18n="k.sendB">Download file</button>
-  </div>
-
-  <div class="scrollarea k-body" id="kioskBody">
-
-    <!-- Startseite: Firma eingeben -->
-    <section id="kPick" class="k-hero hidden">
-      <div class="kick" data-i18n="k.kick">Design Summit 2026</div>
-      <h2 data-i18n="k.welcome">Tell us who is on your design team</h2>
-      <p data-i18n="k.intro">It takes about five minutes. Nothing is sent automatically — at the end you download one file and email it to us.</p>
-      <ol class="how">
-        <li><span class="num">1</span><span data-i18n="k.how1">Enter your company name</span></li>
-        <li><span class="num">2</span><span data-i18n="k.how2">Add each person in your team</span></li>
-        <li><span class="num">3</span><span data-i18n="k.how3">Download the file and email it to us</span></li>
-      </ol>
-      <div class="pickwrap">
-        <label class="flabel" for="kCompanyInput" data-i18n="k.companyLabel">Company name</label>
-        <div class="pickrow">
-          <input type="text" id="kCompanyInput" autocomplete="organization" autocorrect="off" spellcheck="false" data-i18n-ph="k.searchCompany" placeholder="e.g. Ningbo Sunrise Co., Ltd." />
-          <button class="btn btn-blue btn-lg" id="kContinue" data-i18n="k.continue">Start</button>
-        </div>
-        <div class="err" id="kCompanyErr" data-i18n="k.companyErr">Please enter your company name.</div>
+  <div class="scrollarea a-body">
+    <div class="a-inner">
+      <!-- Text kommt aus renderSaveInfo(): "Kein Speicher" (privater Modus)
+           und "Speicher voll" sind zwei verschiedene Faelle. -->
+      <div class="notice bad hidden" id="storageWarn">
+        <b id="storageWarnTag"></b>
+        <span id="storageWarnText"></span>
       </div>
-    </section>
 
-    <!-- Schritt 2: Formular + Team -->
-    <div id="kEnter" class="k-grid hidden">
-      <section class="card pad">
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
-          <div style="flex:1 1 auto;min-width:0">
-            <h2 class="card-title" id="kFormTitle" data-i18n="k.formTitle">Add a person</h2>
-            <div class="card-sub" data-i18n="k.formSub">Only the name is required — everything else helps us plan better.</div>
+      <!-- Die drei Hauptaufgaben: Dateien rein, Excel raus, PDF raus -->
+      <div class="card actionbar">
+        <button class="btn btn-blue btn-lg" id="btnImportJson" data-i18n="a.impJsonB">Import JSON files</button>
+        <div class="ab-info">
+          <b id="totals">—</b>
+          <span><span data-i18n="a.autosaveText">Stored in this browser automatically.</span> <span id="lastSaved"></span></span>
+        </div>
+        <span class="grow"></span>
+        <button class="btn btn-ghost" id="btnExcel" data-i18n="a.excelB">Excel</button>
+        <button class="btn btn-dark" id="btnPdf" data-i18n="a.pdfB">PDF – all suppliers</button>
+      </div>
+
+      <div class="card supplier-bar">
+        <span class="lbl" data-i18n="a.supplier">Supplier</span>
+        <select id="supplierSelect"></select>
+        <button class="btn btn-ghost btn-sm" id="btnRename" data-i18n="a.rename">Rename</button>
+        <button class="btn btn-danger btn-sm" id="btnDeleteSup" data-i18n="a.delete">Delete</button>
+        <span class="grow"></span>
+        <input type="text" id="newSupplierName" class="new-sup" data-i18n-ph="a.newSupplierPh" placeholder="New supplier…" />
+        <button class="btn btn-dark btn-sm" id="btnAddSupplier" data-i18n="a.add">+ Add</button>
+        <span class="pill-count" id="memberCount">0</span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tabMembers" data-i18n="a.tabMembers">Members</button>
+        <button class="tab" id="tabChart" data-i18n="a.tabChart">Org chart</button>
+        <button class="tab" id="tabData" data-i18n="a.tabData">Backup &amp; settings</button>
+      </div>
+
+      <!-- ---- Members ---- -->
+      <div id="adminMembers">
+        <div class="grid2">
+          <div class="card pad">
+            <h2 class="card-title" id="aFormTitle" data-i18n="a.addMember">Add member</h2>
+            <div class="card-sub" data-i18n="a.addMemberSub">Person, categories and software</div>
+            <div id="aFormHost" style="margin-top:20px"></div>
+            <div style="display:flex;gap:12px;margin-top:24px">
+              <button class="btn btn-dark" id="aSubmit" data-i18n="a.saveMember">Save member</button>
+              <button class="btn btn-ghost" id="aReset" data-i18n="btn.cancel">Cancel</button>
+            </div>
           </div>
-          <div class="company-chip" id="kCompanyChip">
-            <span class="nm" id="kCompanyName">—</span>
-            <button type="button" id="kChangeCompany" data-i18n="k.change">Change</button>
+          <div class="card pad">
+            <h2 class="card-title" data-i18n="a.overview">Supplier overview</h2>
+            <div class="card-sub" data-i18n="a.overviewSub">All recorded people for the selected supplier</div>
+            <div id="aTeamList"></div>
           </div>
         </div>
-        <div id="kFormHost" style="margin-top:22px"></div>
-      </section>
+      </div>
 
-      <aside class="card pad">
-        <h2 class="card-title" data-i18n="k.team">Your team</h2>
-        <div class="card-sub" id="kTeamCount">—</div>
-        <div id="kTeamList"></div>
-      </aside>
+      <!-- ---- Org chart ---- -->
+      <div id="adminChart" class="hidden">
+        <div class="card filterbar">
+          <div class="fl"><span class="lbl" data-i18n="a.fCat">Category</span><select id="filterCat"></select></div>
+          <div class="fl"><span class="lbl" data-i18n="a.fCad">3D</span><select id="filterCad"></select></div>
+          <div class="fl"><span class="lbl" data-i18n="a.f2d">2D</span><select id="filter2d"></select></div>
+          <div class="fl"><span class="lbl" data-i18n="a.fAi">AI</span><select id="filterAi"></select></div>
+          <div class="fl"><span class="lbl" data-i18n="a.fSearch">Search</span><input type="search" id="filterSearch" data-i18n-ph="a.fSearchPh" placeholder="Name…" /></div>
+          <div class="fl zoomctl">
+            <span class="lbl" data-i18n="a.fView">View</span>
+            <div class="zoomrow">
+              <button class="zbtn" id="zoomOut" aria-label="Zoom out">−</button>
+              <span class="zpct" id="zoomPct">100%</span>
+              <button class="zbtn" id="zoomIn" aria-label="Zoom in">+</button>
+              <button class="btn btn-ghost btn-sm" id="zoomFit" data-i18n="a.fit">Fit</button>
+            </div>
+          </div>
+        </div>
+        <div class="card filterbar" style="padding:12px 16px">
+          <div class="legend">
+            <span><i class="sq lead"></i> <span data-i18n="legend.lead">Team responsible</span></span>
+            <span><i class="sq cad"></i> <span data-i18n="legend.cad">3D Software</span></span>
+            <span><i class="sq twod"></i> <span data-i18n="legend.twod">2D Software</span></span>
+            <span><i class="sq ai"></i> <span data-i18n="legend.ai">AI Software</span></span>
+            <span><i class="sq lang"></i> <span data-i18n="legend.lang">Languages</span></span>
+          </div>
+        </div>
+
+        <div class="card chart-shell" id="chartShell">
+          <!-- Kopf separat umschlossen: der PDF-Export nimmt ihn als
+               Seitenueberschrift mit (Firmenname, auch in chinesischer Schrift). -->
+          <div id="chartHead">
+            <div class="org-head">
+              <svg class="plus-ic" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 12v24M12 24h24" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/></svg>
+              <span class="company-pill" id="companyPill">COMPANY</span>
+              <div class="org-blobs" aria-hidden="true">
+                <svg viewBox="0 0 40 48"><path d="M4 4 H36 L20 24 Z M4 44 H36 L20 24 Z" fill="#000"/></svg>
+                <svg viewBox="0 0 28 48"><circle cx="14" cy="13" r="12" fill="#000"/><circle cx="14" cy="35" r="12" fill="#000"/></svg>
+                <svg viewBox="0 0 48 28"><rect x="3" y="3" width="42" height="22" rx="11" fill="none" stroke="#000" stroke-width="4"/></svg>
+              </div>
+            </div>
+            <div class="org-sub" id="orgSub">ORGANISATION CHART · DESIGN</div>
+            <div class="org-rule"></div>
+          </div>
+          <div class="chart-scroll" id="chartScroll">
+            <div class="chart-stage" id="chartStage">
+              <div class="chart-inner" id="chartInner">
+                <svg class="chart-lines" id="chartLines"></svg>
+                <div id="chart"></div>
+              </div>
+            </div>
+          </div>
+          <div class="org-foot" aria-hidden="true">
+            <svg viewBox="0 0 28 48"><circle cx="14" cy="13" r="12" fill="#000"/><circle cx="14" cy="35" r="12" fill="#000"/></svg>
+            <svg viewBox="0 0 40 48"><path d="M4 4 H36 L20 24 Z M4 44 H36 L20 24 Z" fill="#000"/></svg>
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#000"/><path d="M24 13v22M13 24h22" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- Backup & settings ---- -->
+      <div id="adminData" class="hidden">
+        <div class="card pad" style="margin-bottom:18px">
+          <h2 class="card-title" data-i18n="a.jsonT">JSON backup</h2>
+          <div class="setrow">
+            <div class="sl"><b data-i18n="a.jsonT2">Save everything</b><span data-i18n="a.jsonS">Full state including all suppliers — can be imported again later, also in another browser.</span></div>
+            <div class="sa">
+              <button class="btn btn-dark" id="btnSaveJson" data-i18n="a.jsonB">Save backup</button>
+              <button class="btn btn-ghost" id="btnForward" data-i18n="a.forwardB">Only this supplier</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card pad" style="margin-bottom:18px">
+          <h2 class="card-title" data-i18n="a.import">Other imports</h2>
+          <div class="setrow">
+            <div class="sl"><b data-i18n="a.impExcelT">Excel / CSV file</b><span data-i18n="a.impExcelS">Recognises German and English column headers, including files exported here.</span></div>
+            <div class="sa"><button class="btn btn-ghost" id="btnImportExcel" data-i18n="a.impExcelB">Import Excel</button></div>
+          </div>
+        </div>
+
+        <div class="card pad" style="margin-bottom:18px">
+          <h2 class="card-title" data-i18n="a.snapT">Restore points</h2>
+          <div class="card-sub" data-i18n="a.snapS">Automatically created on every start and before every import. The five most recent are kept.</div>
+          <div class="snaplist" id="snapList"></div>
+        </div>
+
+        <div class="card pad">
+          <h2 class="card-title" data-i18n="a.settings">Settings</h2>
+          <div class="setrow">
+            <div class="sl"><b data-i18n="a.wipeT">Delete all data</b><span data-i18n="a.wipeS">Removes every supplier and person from this browser. Save a backup first.</span></div>
+            <div class="sa"><button class="btn btn-danger" id="btnWipe" data-i18n="a.wipeB">Reset</button></div>
+          </div>
+          <div class="setrow">
+            <div class="sl"><b data-i18n="a.aboutT">Version</b></div>
+            <div class="sa"><span class="lbl" id="verLabel"></span></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div class="k-bar" id="kBar">
-    <span class="hint" id="kHint"></span>
-    <span class="spacer"></span>
-    <button class="btn btn-ghost" id="kReset" data-i18n="k.reset">Clear</button>
-    <button class="btn btn-blue btn-lg" id="kSubmit" data-i18n="k.submit">Add person</button>
   </div>
 </div>
 
 <!-- ============================== OVERLAYS ============================== -->
-<!-- Nach dem Download: was jetzt noch zu tun ist. Anhaengen kann der
-     Browser die Datei nicht, das muss der Lieferant selbst erledigen. -->
-<div class="overlay done hidden" id="sendOverlay">
-  <div class="sheet">
-    <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-    <h3 data-i18n="s.title">Your file is saved</h3>
-    <p id="sendFile"></p>
-    <ol class="send-steps">
-      <li data-i18n="s.step1">Open a new email to the address below.</li>
-      <li data-i18n="s.step2">Attach the file you just saved.</li>
-      <li data-i18n="s.step3">Send it — that’s all.</li>
-    </ol>
-    <div class="send-addr">
-      <span class="lbl" data-i18n="s.to">Send to</span>
-      <b id="sendAddr"></b>
-      <button type="button" class="btn btn-ghost btn-sm" id="sendCopy" data-i18n="s.copy">Copy address</button>
-    </div>
-    <div class="acts">
-      <button type="button" class="btn btn-ghost btn-lg" id="sendBack" data-i18n="s.back">Back to the form</button>
-      <a class="btn btn-blue btn-lg" id="sendMail" href="#" data-i18n="s.mail">Open email</a>
-    </div>
-  </div>
-</div>
-
 <div class="overlay hidden" id="modal">
   <div class="sheet">
     <h3 id="modalTitle"></h3>
@@ -139,7 +209,12 @@
 
 <div id="toast"></div>
 
+<input type="file" id="fileInput" accept=".json,application/json" multiple />
+<input type="file" id="excelInput" accept=".xlsx,.xls,.csv" />
 
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
