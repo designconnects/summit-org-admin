@@ -1,123 +1,89 @@
-# Design Summit 2026 – Org Chart Admin
+# Design Summit 2026 – Lieferanten-Formular
 
-Auswertung der Dateien, die Lieferanten über das Formular
-(`https://alexiiio2012.github.io/summit-org/`) herunterladen und per Mail an
-designconnects@delta-sport.com schicken:
+Lieferanten bekommen den Link, tragen ihr Design-Team ein, laden am Ende eine
+Datei herunter und schicken sie per E-Mail an
+**designconnects@delta-sport.com**.
 
-**JSON-Dateien importieren → prüfen und korrigieren → Organigramm ansehen →
-Excel und PDF exportieren.**
+**Link für die Lieferanten:** `https://alexiiio2012.github.io/summit-org/`
 
-**Link:** `https://alexiiio2012.github.io/summit-org-admin/`
+Ausgewertet werden die Dateien im eigenen Projekt **summit-org-admin**
+(Import, Organigramm, Excel, PDF): `https://alexiiio2012.github.io/summit-org-admin/`
 
-Die Dateien werden **im Browser** eingelesen und bleiben auf deinem Rechner.
-Auf GitHub liegt nur das leere Werkzeug – keine Namen, E-Mails oder
-Telefonnummern. Lege die JSON-Dateien deshalb **nicht** ins Repo: eine
-GitHub-Pages-Seite ist öffentlich, alles im Repo wäre im Internet abrufbar.
+Es wird **nichts automatisch verschickt** und es gibt keinen Server. Die
+Eingaben liegen nur im Browser des Lieferanten.
 
 ---
 
-## 1. Einrichten auf GitHub (einmalig)
+## 1. Ablauf für die Lieferanten
 
-1. Auf GitHub ein neues Repository **`summit-org-admin`** anlegen.
-   Den Namen bitte genau so – er ist Teil der Adresse.
-2. Den gesamten Inhalt dieses Ordners hochladen (*Add file → Upload files*),
-   **mit den Unterordnern** `fonts/`, `icons/`, `vendor/` und der Datei
-   `.nojekyll`. Am einfachsten den Ordnerinhalt im Explorer markieren und ins
-   Browserfenster ziehen.
-3. *Settings → Pages → Branch: `main`, Ordner `/ (root)` → Save*.
-   Nach ein bis zwei Minuten ist die Seite unter dem Link oben erreichbar.
+1. Link öffnen, **Firmennamen** eingeben, „Start".
+2. **Jede Person** erfassen und „Person hinzufügen" drücken. Nur der Name ist
+   Pflicht.
+3. Oben **„Datei herunterladen"**. Danach erscheint ein Fenster mit der
+   Adresse, einem Knopf „E-Mail öffnen" (Empfänger und Betreff sind
+   vorausgefüllt) und dem Hinweis, die Datei anzuhängen.
 
-`.nojekyll` ist im Explorer evtl. unsichtbar (beginnt mit Punkt). Ohne die
-Datei liefert GitHub Pages die Unterordner unter Umständen nicht aus.
+Was dabei hilft:
 
----
+- **Die Leiste oben** zeigt jederzeit, wie viele Personen erfasst sind und ob
+  die Datei schon heruntergeladen wurde. Wird danach noch etwas geändert,
+  springt sie auf „Seit dem letzten Download geändert".
+- **Vergessene Eingaben:** Steht beim Download noch eine Person im Formular,
+  die nicht hinzugefügt wurde, fragt die App nach.
+- **Neu laden oder später weitermachen** geht: Firma und Personen bleiben im
+  Browser gespeichert.
+- „Ändern" neben dem Firmennamen **benennt um** (z. B. bei Tippfehler), legt
+  keine zweite Firma an.
+- Sprache EN/DE oben rechts, Vorgabe ist Englisch.
 
-## 2. Arbeiten
+**Die Felder:**
 
-**Oben in der Leiste:**
+| Feld | Pflicht | Inhalt |
+|------|---------|--------|
+| Name | ja | — |
+| E-Mail, Telefon | nein | E-Mail wird auf Plausibilität geprüft |
+| Core Categories / product groups | nein | Die **erste** Angabe bestimmt die Gruppe im Organigramm |
+| Languages | nein | Vorauswahl German, English, Mandarin |
+| 3D Software | nein | Vorauswahl SolidWorks, Rhino 3D, KeyShot |
+| 2D Software | nein | Vorauswahl Adobe Photoshop, Illustrator, InDesign |
+| AI Software | nein | Vorauswahl Vizcom, Claude, ChatGPT, Google Gemini |
+| Team responsible | nein | Wer angehakt ist, steht im Organigramm oben |
 
-- **JSON-Dateien importieren** – alle eingegangenen Dateien auf einmal
-  auswählen. Eine Meldung fasst zusammen, wie viele Dateien und Personen
-  übernommen wurden, und nennt Dateien, die nicht lesbar waren.
-- **Excel** – ein Blatt mit allen Lieferanten plus je ein Blatt pro
-  Lieferant. Spalten: Lieferant, Name, E-Mail, Telefon, Team responsible,
-  Kategorien, 3D Software, 2D Software, AI Software, Sprachen.
-- **PDF – alle Lieferanten** – eine Datei, **eine Seite pro Lieferant**. Jede
-  Seite trägt oben den Firmennamen (auch in chinesischer Schrift) und ist so
-  groß wie das jeweilige Organigramm, nichts wird abgeschnitten. Lieferanten
-  ohne Personen werden ausgelassen und in der Meldung genannt. Filter wirken
-  nicht aufs PDF.
+Jede Auswahlzeile hat ein Freitextfeld für eigene Einträge.
 
-**Darunter:** Lieferant auswählen, umbenennen, löschen, neu anlegen.
-
-**Tabs:**
-
-- **Mitglieder** – Personen des gewählten Lieferanten. *Bearbeiten* lädt sie
-  links ins Formular, *Löschen* fragt nach. Personen lassen sich auch von
-  Hand ergänzen.
-- **Organigramm** – Filter nach Kategorie, 3D, 2D, AI, Name; Zoom.
-- **Sicherung & Einstellungen** – JSON-Sicherung, Excel-Import,
-  Wiederherstellungspunkte, alles löschen.
-
-**Schickt ein Lieferant zweimal** (z. B. nach einer Korrektur), fragt die App
-nach: *Zusammenführen* ergänzt nur Personen, die noch fehlen (erkannt über
-Name + E-Mail). Geänderte Angaben bereits vorhandener Personen werden dabei
-**nicht** überschrieben – dafür die Person im Tab *Mitglieder* bearbeiten
-oder vorher löschen und die Datei neu importieren.
+Die Datei heißt `design-summit-2026_<firma>.json`. Sie enthält nur die Werte,
+die tatsächlich ausgewählt sind.
 
 ---
 
-## 3. Wo die Daten liegen
-
-Im Browser, mit dem du die Seite öffnest. Auf einem anderen Rechner oder in
-einem anderen Browser ist der Stand nicht da.
-
-- **Regelmäßig *Sicherung & Einstellungen → Sicherung speichern*.** Die
-  Sicherung lässt sich überall wieder importieren.
-- Die Lieferanten-Dateien aus dem Postfach sind ein zweites Backup: sie
-  lassen sich jederzeit erneut importieren.
-- Wiederherstellungspunkte: bei jedem Öffnen und vor jedem Import, die fünf
-  neuesten bleiben.
-- Rote Hinweise: **„Kein Speicher"** = privater Modus, **„Speicher voll"** =
-  letzte Eingaben nicht gespeichert, sofort sichern.
-
-**Bisherige Daten:** Hattest du im Lieferanten-Formular schon den früheren
-Admin-Bereich (`…/summit-org/?admin`) benutzt, ist dieser Stand hier
-automatisch da – im selben Browser. Beide Projekte liegen unter
-`alexiiio2012.github.io` und teilen sich den Browser-Speicher.
-
----
-
-## 4. Dateien
+## 2. Dateien im Repo
 
 | Datei / Ordner | Zweck |
 |----------------|-------|
-| `index.html`, `app.css`, `app.js` | Das Werkzeug |
-| `vendor/` | xlsx (Excel), html2canvas (Bild), jsPDF (PDF) – lokal, kein CDN |
+| `index.html`, `app.css`, `app.js` | Das Formular |
+| `sw.js` | Baut den Offline-Speicher der alten iPad-Version ab – siehe unten |
 | `fonts/` | Mulish, lokal (SIL Open Font License 1.1) |
 | `icons/` | Browser-Symbol |
 | `_lokal_testen.ps1` | Testserver für den Windows-Rechner, nicht Teil der App |
 | `.nojekyll` | Sorgt dafür, dass GitHub Pages die Ordner unverändert ausliefert |
 
-Lokal testen: Rechtsklick auf `_lokal_testen.ps1` → „Mit PowerShell
-ausführen", der Browser öffnet `http://localhost:8099/`.
+Es gibt keine Verbindung nach außen: kein CDN, keine Google-Fonts, kein Tracking.
 
-Falls das Lieferanten-Formular einmal umzieht: die Adresse steht in `app.js`
-ganz oben bei `FORM_URL`.
+**Zu `sw.js`:** Die frühere iPad-Version hat sich als Offline-App
+eingerichtet und die Seite aus einem eigenen Speicher ausgeliefert. Wer sie
+einmal geöffnet hat, würde ohne `sw.js` dauerhaft den alten Stand sehen. Die
+jetzige `sw.js` räumt das beim nächsten Aufruf ab und lädt die Seite neu.
+**Nicht löschen.**
+
+Nach Änderungen an der App ist kein Hochzählen von Versionen mehr nötig –
+GitHub Pages liefert direkt aus (ggf. einmal mit Strg+F5 neu laden).
 
 ---
 
-## 5. Organigramm-Logik
+## 3. Vor dem Versand testen
 
-**Wurzel:** Wer **Team responsible** angehakt hat, steht oben. Sind mehrere
-Personen so markiert, wird die erste zur Wurzel, die anderen behalten ihre
-Kennzeichnung. Ist niemand markiert, bildet ein Firmenknoten die Wurzel.
+Rechtsklick auf `_lokal_testen.ps1` → „Mit PowerShell ausführen". Der Browser
+öffnet `http://localhost:8099/`.
 
-**Gruppierung:** Maßgeblich ist die **erste** Kategorie einer Person. Die Zahl
-im schwarzen Kreis am Label ist die Personenzahl der Gruppe.
-
-- Kategorien mit **mehreren** Personen: eigene Zeile, Label links, Personen
-  nebeneinander, Spalten bündig.
-- Kategorien mit **genau einer** Person: gemeinsam in der letzten Zeile.
-- Ohne Kategorie: Sammelgruppe **„Sonderprojekte"** (*Special projects*),
-  änderbar in `app.js` beim Schlüssel `chart.noCat`.
+Eingaben beim Testen liegen nur in deinem Browser und berühren den Bestand im
+Admin-Projekt nicht (eigener Speicher-Schlüssel).

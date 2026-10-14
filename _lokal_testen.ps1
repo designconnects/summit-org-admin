@@ -2,7 +2,7 @@
 #
 # Rechtsklick auf diese Datei -> "Mit PowerShell ausfuehren". Der Browser
 # oeffnet sich selbst:
-#   http://localhost:8099/   Organigramm-Auswertung (Admin)
+#   http://localhost:8099/   Lieferanten-Formular
 #
 # Beenden: dieses Fenster schliessen oder Strg+C.
 
