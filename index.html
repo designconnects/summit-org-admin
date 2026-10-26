@@ -48,8 +48,13 @@
           <span><span data-i18n="a.autosaveText">Stored in this browser automatically.</span> <span id="lastSaved"></span></span>
         </div>
         <span class="grow"></span>
+        <!-- Exportiert wird immer nur der unten ausgewaehlte Lieferant -->
+        <div class="ab-export">
+          <span class="lbl" data-i18n="a.exportFor">Export</span>
+          <b id="exportName">—</b>
+        </div>
         <button class="btn btn-ghost" id="btnExcel" data-i18n="a.excelB">Excel</button>
-        <button class="btn btn-dark" id="btnPdf" data-i18n="a.pdfB">PDF – all suppliers</button>
+        <button class="btn btn-dark" id="btnPdf" data-i18n="a.pdfB">PDF</button>
       </div>
 
       <div class="card supplier-bar">

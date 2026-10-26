@@ -9,7 +9,7 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 
 /* Das Lieferanten-Formular, fuer "Formular oeffnen" und "Link kopieren".
    Beide Repos liegen im selben GitHub-Konto, also wird die Adresse aus der
@@ -137,7 +137,9 @@ const STR = {
   "a.quotaText":     ["The storage of this browser is full — the last entries could NOT be saved. Export a JSON backup now, then delete old restore points or suppliers you no longer need.","Der Speicher dieses Browsers ist voll — die letzten Eingaben konnten NICHT gespeichert werden. Jetzt eine JSON-Sicherung exportieren, danach alte Wiederherstellungspunkte oder nicht mehr benötigte Lieferanten löschen."],
 
   "a.excelB":        ["Excel", "Excel"],
-  "a.pdfB":          ["PDF – all suppliers", "PDF – alle Lieferanten"],
+  "a.pdfB":          ["PDF", "PDF"],
+  "a.exportFor":     ["Export", "Export"],
+  "a.exportNone":    ["no supplier selected", "kein Lieferant gewählt"],
   "a.jsonT":         ["JSON backup", "JSON-Sicherung"],
   "a.jsonS":         ["Full state including all suppliers — can be imported again later, also in another browser.", "Vollständiger Stand mit allen Lieferanten — lässt sich später wieder importieren, auch in einem anderen Browser."],
   "a.jsonT2":        ["Save everything", "Alles sichern"],
@@ -184,11 +186,10 @@ const STR = {
   "t.needSupplier":  ["Please create a supplier first.", "Bitte zuerst einen Lieferanten anlegen."],
   "t.noData":        ["Nothing to export yet.", "Noch nichts zu exportieren."],
   "t.noChart":       ["No org chart to export.", "Kein Organigramm zum Exportieren."],
-  "t.excelOk":       ["Excel exported — {n} supplier(s).", "Excel exportiert — {n} Lieferant(en)."],
+  "t.excelOk":       ["Excel exported: {name}.", "Excel exportiert: {name}."],
   "t.csvOk":         ["Exported as CSV.", "Als CSV exportiert."],
-  "t.pdfWait":       ["Creating PDF… {i} of {n}", "PDF wird erstellt… {i} von {n}"],
-  "t.pdfOk":         ["PDF exported — {n} suppliers, one page each.", "PDF exportiert — {n} Lieferanten, je eine Seite."],
-  "t.pdfSkipped":    ["Skipped (no people): {names}", "Ausgelassen (keine Personen): {names}"],
+  "t.pdfWait":       ["Creating PDF…", "PDF wird erstellt…"],
+  "t.pdfOk":         ["PDF exported: {name}.", "PDF exportiert: {name}."],
   "t.pdfFail":       ["PDF failed — opening the print dialog instead.", "PDF fehlgeschlagen — Druckdialog wird geöffnet."],
   "t.jsonOk":        ["Backup saved.", "Sicherung gespeichert."],
   "t.fwdOk":         ["File created for “{name}”.", "Datei für „{name}“ erstellt."],
@@ -216,8 +217,7 @@ const STR = {
   "x.twoD":          ["2D Software", "2D-Software"],
   "x.ai":            ["AI Software", "AI-Software"],
   "x.langs":         ["Languages", "Sprachen"],
-  "x.yes":           ["Yes", "Ja"],
-  "x.allSuppliers":  ["All suppliers", "Alle Lieferanten"]
+  "x.yes":           ["Yes", "Ja"]
 };
 
 let LANG = "en";
@@ -826,6 +826,11 @@ function renderSupplierBar() {
   }
   const sup = curSup();
   $("memberCount").textContent = t("a.nMembers", { n: sup ? sup.employees.length : 0 });
+  // An den Export-Knoepfen sichtbar machen, wessen Organigramm herauskommt
+  $("exportName").textContent = sup ? nameOr(sup.name) : t("a.exportNone");
+  const ok = !!(sup && sup.employees.length);
+  $("btnExcel").disabled = !ok;
+  $("btnPdf").disabled = !ok;
 }
 
 function renderAdminTeam() {
@@ -1158,49 +1163,37 @@ function empRow(e) {
     (e.twoD || []).join(", "), (e.ai || []).join(", "), (e.languages || []).join(", ")];
 }
 
+/* Excel und PDF exportieren immer nur den oben ausgewaehlten Lieferanten.
+   Dateiname wie beim Lieferanten-Formular: Organizational-Chart_<lieferant> */
+function exportBaseName(sup) { return "Organizational-Chart_" + slug(sup.name); }
+
 async function exportExcel() {
-  if (!store.suppliers.length) { toast(t("t.noData")); return; }
-  const headAll = [t("x.supplier"), t("x.name"), t("x.email"), t("x.phone"), t("x.lead"),
-                   t("x.cats"), t("x.cad"), t("x.twoD"), t("x.ai"), t("x.langs")];
-  const headSup = headAll.slice(1);
-  const rowsAll = [headAll];
-  const perSup = [];
-  store.suppliers.forEach((sup, i) => {
-    const rows = [headSup];
-    sortedEmployees(sup).forEach(e => {
-      const r = empRow(e);
-      rows.push(r);
-      rowsAll.push([nameOr(sup.name), ...r]);
-    });
-    perSup.push({ name: nameOr(sup.name) || ("Supplier " + (i + 1)), rows });
-  });
+  const sup = curSup();
+  if (!sup || !sup.employees.length) { toast(t("t.noData")); return; }
+  // Lieferanten-Spalte bleibt drin: Beim Wiedereinlesen ordnet der Import die
+  // Zeilen darueber zu – der Blattname waere auf 31 Zeichen gekuerzt.
+  const head = [t("x.supplier"), t("x.name"), t("x.email"), t("x.phone"), t("x.lead"),
+                t("x.cats"), t("x.cad"), t("x.twoD"), t("x.ai"), t("x.langs")];
+  const rowsAll = [head];
+  sortedEmployees(sup).forEach(e => rowsAll.push([nameOr(sup.name), ...empRow(e)]));
 
   if (typeof XLSX !== "undefined") {
     const wb = XLSX.utils.book_new();
-    const wsAll = XLSX.utils.aoa_to_sheet(rowsAll);
-    wsAll["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(wb, wsAll, t("x.allSuppliers").slice(0, 31));
-    const used = new Set([t("x.allSuppliers").slice(0, 31).toLowerCase()]);
-    perSup.forEach((s, i) => {
-      let nm = (s.name || ("Supplier " + (i + 1))).replace(/[\\\/\?\*\[\]:]/g, " ").trim().slice(0, 28) || ("Supplier " + (i + 1));
-      const base = nm.slice(0, 25);
-      let k = 2;
-      while (used.has(nm.toLowerCase())) { nm = base + " " + k; k++; }
-      used.add(nm.toLowerCase());
-      const ws = XLSX.utils.aoa_to_sheet(s.rows);
-      ws["!cols"] = [{ wch: 20 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
-      XLSX.utils.book_append_sheet(wb, ws, nm);
-    });
+    const ws = XLSX.utils.aoa_to_sheet(rowsAll);
+    ws["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+    // Blattnamen: max. 31 Zeichen, ohne \ / ? * [ ] :
+    const sheet = nameOr(sup.name).replace(/[\\\/\?\*\[\]:]/g, " ").trim().slice(0, 31) || "Supplier";
+    XLSX.utils.book_append_sheet(wb, ws, sheet);
     const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const how = await deliverFile(blob, "supplier-overview.xlsx");
-    if (how !== "aborted") toast(how === "shared" ? t("t.shared") : t("t.excelOk", { n: store.suppliers.length }));
+    const how = await deliverFile(blob, exportBaseName(sup) + ".xlsx");
+    if (how !== "aborted") toast(how === "shared" ? t("t.shared") : t("t.excelOk", { name: nameOr(sup.name) }));
     return;
   }
   const esc = v => { v = (v == null ? "" : String(v)); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const csv = rowsAll.map(r => r.map(esc).join(";")).join("\r\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const how = await deliverFile(blob, "supplier-overview.csv");
+  const how = await deliverFile(blob, exportBaseName(sup) + ".csv");
   if (how !== "aborted") toast(t("t.csvOk"));
 }
 
@@ -1240,8 +1233,8 @@ async function saveJson(onlyCurrent) {
   toast(onlyCurrent ? t("t.fwdOk", { name: nameOr(curSup().name) }) : t("t.jsonOk"));
 }
 
-/* ---- PDF: alle Lieferanten, eine Seite je Lieferant ----
-   Fuer jede Seite wird eine Kopie von Kopf (Firmenname, Untertitel),
+/* ---- PDF: eine Seite mit dem Organigramm des ausgewaehlten Lieferanten ----
+   Fuer die Seite wird eine Kopie von Kopf (Firmenname, Untertitel),
    Diagramm und Fusszeile in einer unsichtbaren Buehne aufgebaut und per
    html2canvas aufgenommen. Der Firmenname kommt so als Bild ins PDF – auch
    chinesische Schrift, die die eingebaute PDF-Schrift nicht kennt.
@@ -1301,58 +1294,42 @@ async function captureSupplierPage(stage) {
   }
 }
 
+/* Organigramm des ausgewaehlten Lieferanten als eine PDF-Seite */
 async function exportPdf() {
-  const list = store.suppliers.slice().sort((a, b) => nameOr(a.name).localeCompare(nameOr(b.name)));
-  const withPeople = list.filter(s => s.employees.length);
-  const skipped = list.filter(s => !s.employees.length).map(s => nameOr(s.name));
-  if (!withPeople.length) { toast(t("t.noChart")); return; }
+  const sup = curSup();
+  if (!sup || !sup.employees.length) { toast(t("t.noChart")); return; }
   if (typeof html2canvas === "undefined" || !window.jspdf) {
     toast(t("t.pdfFail"));
     setTimeout(() => window.print(), 250);
     return;
   }
 
-  const prevId = store.currentSupplierId;
   const btn = $("btnPdf");
   btn.disabled = true;
   adminTab("chart");
+  toast(t("t.pdfWait"), 60000);
   const stage = el("div", "pdf-stage");
   document.body.appendChild(stage);
   try {
+    renderChart();
+    await nextFrames(160);                              // renderChart misst per Timer nach
+    const shot = await captureSupplierPage(stage);
+    const iw = shot.cssW * PT, ih = shot.cssH * PT;
+    const pw = iw + PAGE_PAD * 2, ph = ih + PAGE_PAD * 2;
     const { jsPDF } = window.jspdf;
-    let pdf = null;
-    for (let i = 0; i < withPeople.length; i++) {
-      toast(t("t.pdfWait", { i: i + 1, n: withPeople.length }), 60000);
-      store.currentSupplierId = withPeople[i].id;
-      renderChart();
-      await nextFrames(160);                            // renderChart misst per Timer nach
-
-      const shot = await captureSupplierPage(stage);
-      const iw = shot.cssW * PT, ih = shot.cssH * PT;
-      const pw = iw + PAGE_PAD * 2, ph = ih + PAGE_PAD * 2;
-      const orient = pw >= ph ? "landscape" : "portrait";
-      if (!pdf) pdf = new jsPDF({ orientation: orient, unit: "pt", format: [pw, ph] });
-      else pdf.addPage([pw, ph], orient);
-      pdf.setFillColor(237, 237, 237);
-      pdf.rect(0, 0, pw, ph, "F");
-      pdf.addImage(shot.canvas.toDataURL("image/png"), "PNG", PAGE_PAD, PAGE_PAD, iw, ih, undefined, "FAST");
-    }
-    pdf.setProperties({ title: "Design Summit 2026 – Org charts", creator: "Summit Org Admin " + APP_VERSION });
-    const day = new Date().toISOString().slice(0, 10);
-    const how = await deliverFile(pdf.output("blob"), "design-summit-2026_org-charts_" + day + ".pdf", "application/pdf");
-    if (how !== "aborted") {
-      let msg = how === "shared" ? t("t.shared") : t("t.pdfOk", { n: withPeople.length });
-      if (skipped.length) msg += " " + t("t.pdfSkipped", { names: skipped.join(", ") });
-      toast(msg, skipped.length ? 7000 : 3500);
-    }
+    const pdf = new jsPDF({ orientation: pw >= ph ? "landscape" : "portrait", unit: "pt", format: [pw, ph] });
+    pdf.setFillColor(237, 237, 237);
+    pdf.rect(0, 0, pw, ph, "F");
+    pdf.addImage(shot.canvas.toDataURL("image/png"), "PNG", PAGE_PAD, PAGE_PAD, iw, ih, undefined, "FAST");
+    pdf.setProperties({ title: "Organizational Chart – " + nameOr(sup.name), creator: "Summit Org Admin " + APP_VERSION });
+    const how = await deliverFile(pdf.output("blob"), exportBaseName(sup) + ".pdf", "application/pdf");
+    if (how !== "aborted") toast(how === "shared" ? t("t.shared") : t("t.pdfOk", { name: nameOr(sup.name) }));
   } catch (e) {
     toast(t("t.pdfFail"));
     setTimeout(() => window.print(), 250);
   } finally {
     stage.remove();
     btn.disabled = false;
-    store.currentSupplierId = prevId;
-    renderSupplierBar();
     renderChart();
   }
 }

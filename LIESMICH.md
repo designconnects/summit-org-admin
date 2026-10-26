@@ -41,14 +41,17 @@ Dateien des Lieferanten-Formulars im falschen Repo.
 - **JSON-Dateien importieren** – alle eingegangenen Dateien auf einmal
   auswählen. Eine Meldung fasst zusammen, wie viele Dateien und Personen
   übernommen wurden, und nennt Dateien, die nicht lesbar waren.
-- **Excel** – ein Blatt mit allen Lieferanten plus je ein Blatt pro
-  Lieferant. Spalten: Lieferant, Name, E-Mail, Telefon, Team responsible,
-  Kategorien, 3D Software, 2D Software, AI Software, Sprachen.
-- **PDF – alle Lieferanten** – eine Datei, **eine Seite pro Lieferant**. Jede
-  Seite trägt oben den Firmennamen (auch in chinesischer Schrift) und ist so
-  groß wie das jeweilige Organigramm, nichts wird abgeschnitten. Lieferanten
-  ohne Personen werden ausgelassen und in der Meldung genannt. Filter wirken
-  nicht aufs PDF.
+- **Excel** und **PDF** exportieren **nur den ausgewählten Lieferanten**.
+  Links neben den Knöpfen steht, für wen („Export: …"). Für einen anderen
+  Lieferanten erst unten in der Lieferanten-Leiste umschalten. Hat der
+  Lieferant noch keine Personen, sind beide Knöpfe gesperrt.
+  - **Excel:** ein Blatt mit den Spalten Lieferant, Name, E-Mail, Telefon,
+    Team responsible, Kategorien, 3D Software, 2D Software, AI Software,
+    Sprachen. Lässt sich unverändert wieder importieren.
+  - **PDF:** eine Seite mit dem Organigramm, oben der Firmenname (auch in
+    chinesischer Schrift). Die Seite ist so groß wie das Organigramm, nichts
+    wird abgeschnitten. Filter wirken nicht aufs PDF.
+  - Dateiname: `Organizational-Chart_<lieferant>.xlsx` bzw. `.pdf`.
 
 **Darunter:** Lieferant auswählen, umbenennen, löschen, neu anlegen.
 
