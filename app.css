@@ -331,56 +331,48 @@ a.btn{text-decoration:none}
 .chart-lines{position:absolute;top:0;left:0;pointer-events:none;z-index:0;overflow:visible}
 #chart{position:relative;z-index:1}
 
-/* Aufbau: Wurzel oben, darunter je Kategorie eine Zeile.
-   Kategorien mit mehreren Personen bekommen eine eigene Zeile
-   (Label links, Mitglieder nebeneinander), Kategorien mit genau
-   einer Person stehen gemeinsam in der letzten Zeile nebeneinander.
-   Die Verbindungslinien zeichnet drawConnectors() als SVG darunter. */
-.ochart{display:flex;flex-direction:column;gap:34px}
-.oc-root{display:flex;justify-content:center}
-.oc-groups{display:flex;flex-direction:column;gap:44px;padding-left:32px}
-
-/* Raster: erste Spalte alle Labels (gleich breit), zweite Spalte die Personen.
-   Dadurch beginnen die Personen in jeder Zeile an derselben Kante. */
-.oc-multi{
-  display:grid;grid-template-columns:max-content max-content;
-  column-gap:36px;row-gap:44px;align-items:start;
+/* Aufbau: Teamleitung oben im eigenen Rahmen, darunter eine Linie zum
+   Team-Block mit allen uebrigen Personen als Karten im Raster.
+   Die Spalten sind 1fr breit in einem Block mit Inhaltsbreite – dadurch werden
+   alle Karten so breit wie die breiteste und stehen buendig untereinander. */
+.ochart{display:flex;flex-direction:column;align-items:center}
+.oc-lead{
+  border:3px solid #000;border-radius:26px;padding:22px 30px;
+  transition:opacity .15s ease;
 }
-.oc-members{display:flex;align-items:flex-start;gap:26px}
-
-.oc-singles{display:flex;align-items:flex-start;gap:44px}
-.oc-cell{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
-
-.oc-label{
-  display:inline-flex;align-items:center;gap:10px;flex:0 0 auto;
-  border:2.5px solid #000;border-radius:11px;background:#fff;
-  padding:5px 13px;font-size:12px;font-weight:800;letter-spacing:.14em;
-  text-transform:uppercase;color:#000;white-space:nowrap;
-  margin-top:12px;                     /* zentriert das Label auf den Avatar */
+.oc-stem{width:3px;height:36px;background:#000;flex:0 0 auto}
+.oc-team{
+  display:grid;gap:18px;align-items:stretch;
+  border:3px solid #000;border-radius:26px;padding:22px;
 }
-.oc-label .n{
-  width:19px;height:19px;border-radius:999px;background:#000;color:#fff;
-  font-size:11px;font-weight:800;letter-spacing:0;
-  display:grid;place-items:center;flex:0 0 auto;
+.oc-card{
+  border:2px solid #b9b9bf;border-radius:20px;padding:18px 20px;
+  transition:opacity .15s ease;
 }
-.oc-cell .oc-label{margin-top:0}
+.oc-lead.dim,.oc-card.dim{opacity:.26}
 
 .onode{display:inline-flex;gap:13px;align-items:flex-start;text-align:left;vertical-align:top;transition:opacity .15s ease}
 .onode.dim{opacity:.26}
 .avatar{width:58px;height:58px;flex:0 0 auto}
 .onode.root .avatar{width:82px;height:82px}
-.fields{display:flex;flex-direction:column;gap:6px}
+/* Alle Kaesten einer Person sind gleich breit (die Spalte streckt sie).
+   Ohne Obergrenze zog eine lange Kategorieliste die ganze Karte in die
+   Breite – bis ueber 1000 px. 352 px ist die Breite einer ueblichen Karte
+   (drei Adobe-Programme in einer Zeile); laengere Listen brechen jetzt
+   innerhalb ihres Kastens um, die Karte wird dafuer etwas hoeher. */
+.fields{display:flex;flex-direction:column;gap:6px;max-width:352px}
+.onode.root .fields{max-width:420px}
 .fbox{
   border:2px solid var(--blue);border-radius:11px;padding:5px 13px;
   font-weight:700;font-size:12.5px;color:var(--blue);background:#fff;
-  white-space:nowrap;text-align:left;
+  white-space:normal;overflow-wrap:break-word;text-align:left;
 }
 .fbox.name{border:2.5px solid #000;color:#000;font-weight:800;font-size:15px;min-width:190px}
 .onode.root .fbox.name{font-size:19px;min-width:230px}
 .fbox.role{border-color:#c9c9c9;color:#9a9a9a;font-weight:800}
 .fbox.company{border-color:#000;color:#000;font-weight:800;font-size:17px;letter-spacing:.04em;text-transform:uppercase}
 .fbox.mail,.fbox.phone{font-weight:600;font-size:12px}
-.frow{display:flex;gap:6px}
+.frow{display:flex;flex-wrap:wrap;gap:6px}
 .fbox.cad{background:var(--coral);border-color:var(--coral);color:#3a1420}
 .fbox.twod{background:#fff;border-color:var(--coral);color:var(--coral-dark)}
 .fbox.ai{background:#000;border-color:#000;color:#fff}
@@ -410,7 +402,7 @@ input[type=file]{display:none}
   .chart-shell{background:#fff;padding:0}
   #adminChart .card{border:none}
   .chart-scroll{overflow:visible!important}
-  .onode.dim{opacity:1}
+  .onode.dim,.oc-lead.dim,.oc-card.dim{opacity:1}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

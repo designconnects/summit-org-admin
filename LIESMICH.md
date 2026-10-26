@@ -114,17 +114,21 @@ ganz oben bei `FORM_URL`.
 
 ---
 
-## 5. Organigramm-Logik
+## 5. Aufbau des Organigramms
 
-**Wurzel:** Wer **Team responsible** angehakt hat, steht oben. Sind mehrere
-Personen so markiert, wird die erste zur Wurzel, die anderen behalten ihre
-Kennzeichnung. Ist niemand markiert, bildet ein Firmenknoten die Wurzel.
+- **Oben** in einem eigenen Rahmen: wer **Team responsible** angehakt hat.
+  Ist niemand markiert, steht dort der Firmenname.
+- **Eine Linie nach unten** zum Team-Block.
+- **Im Team-Block** alle übrigen Personen als einzelne Karten, drei pro
+  Zeile, alphabetisch. Bei ein oder zwei Personen entsprechend weniger
+  Spalten. Alle Karten sind gleich breit; lange Kategorielisten brechen
+  innerhalb ihres Kastens um.
+- Sind **mehrere** Personen als Team responsible markiert, steht die erste
+  oben, die anderen kommen zuerst in den Team-Block und behalten ihre
+  Kennzeichnung.
 
-**Gruppierung:** Maßgeblich ist die **erste** Kategorie einer Person. Die Zahl
-im schwarzen Kreis am Label ist die Personenzahl der Gruppe.
+Nach Kategorien wird nicht gruppiert; die Kategorien stehen in jeder Karte.
+Die Spaltenzahl steht in `app.js` bei `TEAM_COLS`.
 
-- Kategorien mit **mehreren** Personen: eigene Zeile, Label links, Personen
-  nebeneinander, Spalten bündig.
-- Kategorien mit **genau einer** Person: gemeinsam in der letzten Zeile.
-- Ohne Kategorie: Sammelgruppe **„Sonderprojekte"** (*Special projects*),
-  änderbar in `app.js` beim Schlüssel `chart.noCat`.
+Filter blenden nicht passende Karten ab, entfernen sie aber nicht. Das PDF
+zeigt immer alle Karten voll.

@@ -9,7 +9,7 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "1.0.1";
+const APP_VERSION = "1.1";
 
 /* Das Lieferanten-Formular, fuer "Formular oeffnen" und "Link kopieren".
    Beide Repos liegen im selben GitHub-Konto, also wird die Adresse aus der
@@ -126,7 +126,6 @@ const STR = {
   "legend.lang":     ["Languages", "Sprachen"],
   "chart.sub":       ["ORGANISATION CHART · DESIGN", "ORGANIGRAMM · DESIGN"],
   "chart.role":      ["Team responsible", "Teamverantwortlich"],
-  "chart.noCat":     ["Special projects", "Sonderprojekte"],
 
   "a.autosaveText":  ["Stored in this browser automatically.", "Wird automatisch in diesem Browser gespeichert."],
   "a.lastSaved":     ["Last saved: {time}", "Zuletzt gespeichert: {time}"],
@@ -980,6 +979,12 @@ function matchesFilter(emp) {
 
 function fbox(kind, text) { return el("div", "fbox " + kind, text); }
 
+/* Werteliste fuer einen Kasten. Geschuetztes Leerzeichen (Zeichen 160) vor dem
+   Punkt: Bricht eine lange Liste um, bleibt "·" am vorigen Wort statt eine
+   Zeile zu beginnen. */
+const LIST_SEP = String.fromCharCode(160) + "· ";
+function joinList(arr) { return arr.join(LIST_SEP); }
+
 function empNode(emp, isRoot, active) {
   const on = el("div", "onode" + (isRoot ? " root" : "") + (active && !matchesFilter(emp) ? " dim" : ""));
   on.innerHTML = AVATAR;
@@ -991,23 +996,23 @@ function empNode(emp, isRoot, active) {
   const cats = emp.categories || [], cads = emp.cad || [];
   if (cats.length || cads.length) {
     const r = el("div", "frow");
-    if (cats.length) r.appendChild(fbox("cat", cats.join(" · ")));
-    if (cads.length) r.appendChild(fbox("cad", cads.join(" · ")));
+    if (cats.length) r.appendChild(fbox("cat", joinList(cats)));
+    if (cads.length) r.appendChild(fbox("cad", joinList(cads)));
     f.appendChild(r);
   }
   if ((emp.twoD || []).length) {
     const r = el("div", "frow");
-    r.appendChild(fbox("twod", emp.twoD.join(" · ")));
+    r.appendChild(fbox("twod", joinList(emp.twoD)));
     f.appendChild(r);
   }
   if ((emp.ai || []).length) {
     const r = el("div", "frow");
-    r.appendChild(fbox("ai", emp.ai.join(" · ")));
+    r.appendChild(fbox("ai", joinList(emp.ai)));
     f.appendChild(r);
   }
   if ((emp.languages || []).length) {
     const r = el("div", "frow");
-    r.appendChild(fbox("lang", emp.languages.join(" · ")));
+    r.appendChild(fbox("lang", joinList(emp.languages)));
     f.appendChild(r);
   }
   on.appendChild(f);
@@ -1023,36 +1028,21 @@ function companyNode(sup) {
   return on;
 }
 
-/* Jede Person wird ueber ihre ERSTE Kategorie einer Gruppe zugeordnet.
-   Wer keine Kategorie angegeben hat, landet in einer eigenen Sammelgruppe. */
-function primaryCategory(emp) {
-  const c = (emp.categories || []).filter(Boolean);
-  return c.length ? c[0] : null;
-}
+/* ---- Aufbau ----
+   Oben die Teamleitung (wer "Team responsible" angehakt hat) in einem eigenen
+   Rahmen, darunter eine Linie zum Team-Block: alle uebrigen Personen als
+   einzelne Karten im Raster, alphabetisch. Nach Kategorien wird nicht mehr
+   gruppiert – die Kategorien stehen in jeder Karte.
+   Ist niemand als Teamleitung markiert, steht oben der Firmenname. Sind
+   mehrere markiert, steht die erste oben; die anderen kommen zuerst in den
+   Team-Block und behalten ihre Kennzeichnung. */
+const TEAM_COLS = 3;     // Karten je Zeile im Team-Block
 
-function buildGroups(sorted, lead) {
-  const map = new Map();
-  sorted.forEach(e => {
-    if (lead && e.id === lead.id) return;          // Teamverantwortlicher ist die Wurzel
-    const cat = primaryCategory(e);
-    const key = cat || "_nocat";
-    if (!map.has(key)) map.set(key, { label: cat || t("chart.noCat"), isOther: !cat, members: [] });
-    map.get(key).members.push(e);
-  });
-  const all = [...map.values()];
-  return {
-    multi: all.filter(g => g.members.length > 1)
-      .sort((a, b) => b.members.length - a.members.length || a.label.localeCompare(b.label)),
-    singles: all.filter(g => g.members.length === 1)
-      .sort((a, b) => (a.isOther ? 1 : 0) - (b.isOther ? 1 : 0) || a.label.localeCompare(b.label))
-  };
-}
-
-function groupLabel(g) {
-  const d = el("div", "oc-label");
-  d.appendChild(document.createTextNode(g.label));
-  d.appendChild(el("span", "n", String(g.members.length)));
-  return d;
+/* Filter dimmen die ganze Karte samt Rahmen, nicht nur den Inhalt */
+function moveDim(node, holder) {
+  if (node.classList.contains("dim")) { node.classList.remove("dim"); holder.classList.add("dim"); }
+  holder.appendChild(node);
+  return holder;
 }
 
 function renderChart() {
@@ -1063,12 +1053,12 @@ function renderChart() {
 
   if (!sup || !sup.employees.length) {
     chart.appendChild(emptyBox("a.noChart1", "a.noChart2"));
-    const inner = $("chartInner"), stage = $("chartStage"), svg = $("chartLines");
+    const inner = $("chartInner"), stage = $("chartStage");
     inner.style.transform = "none";
     // Der Platzhalter liegt absolut positioniert – die Buehne braucht eine eigene Hoehe,
     // sonst rutscht die Fusszeile darueber.
     stage.style.width = "100%"; stage.style.height = "240px";
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    drawConnectors();
     $("zoomPct").textContent = "100%";
     return;
   }
@@ -1076,41 +1066,18 @@ function renderChart() {
   const active = !!(filters.cat || filters.cad || filters.twoD || filters.ai || filters.search);
   const sorted = sortedEmployees(sup);
   const lead = sorted.find(e => e.isLead) || null;
+  const team = sorted.filter(e => e !== lead);
 
   const wrap = el("div", "ochart");
+  wrap.appendChild(moveDim(lead ? empNode(lead, true, active) : companyNode(sup), el("div", "oc-lead")));
 
-  const rootBox = el("div", "oc-root");
-  rootBox.appendChild(lead ? empNode(lead, true, active) : companyNode(sup));
-  wrap.appendChild(rootBox);
-
-  const { multi, singles } = buildGroups(sorted, lead);
-  if (multi.length || singles.length) {
-    const groups = el("div", "oc-groups");
-    // Kategorien mit mehreren Personen: eigene Zeile, Mitglieder nebeneinander.
-    // Label und Mitglieder liegen als Paar direkt im Raster, damit alle Labels
-    // gleich breit werden und die Personen-Spalten bündig untereinander stehen.
-    if (multi.length) {
-      const grid = el("div", "oc-multi");
-      multi.forEach(g => {
-        grid.appendChild(groupLabel(g));
-        const mem = el("div", "oc-members");
-        g.members.forEach(m => mem.appendChild(empNode(m, false, active)));
-        grid.appendChild(mem);
-      });
-      groups.appendChild(grid);
-    }
-    // Kategorien mit genau einer Person: gemeinsam in eine Zeile, nebeneinander
-    if (singles.length) {
-      const row = el("div", "oc-singles");
-      singles.forEach(g => {
-        const cell = el("div", "oc-cell");
-        cell.appendChild(groupLabel(g));
-        cell.appendChild(empNode(g.members[0], false, active));
-        row.appendChild(cell);
-      });
-      groups.appendChild(row);
-    }
-    wrap.appendChild(groups);
+  if (team.length) {
+    wrap.appendChild(el("div", "oc-stem"));
+    const block = el("div", "oc-team");
+    // Bei kleinen Teams nicht mehr Spalten als Personen, sonst bleiben Luecken
+    block.style.gridTemplateColumns = "repeat(" + Math.min(TEAM_COLS, team.length) + ", 1fr)";
+    team.forEach(m => block.appendChild(moveDim(empNode(m, false, active), el("div", "oc-card"))));
+    wrap.appendChild(block);
   }
   chart.appendChild(wrap);
   // Nach dem Layout messen. requestAnimationFrame wird im Hintergrund-Tab
@@ -1120,106 +1087,15 @@ function renderChart() {
   renderChart._t = setTimeout(applyZoom, 120);
 }
 
+/* Die einzige Verbindung (Teamleitung -> Team-Block) ist jetzt ein Element
+   (.oc-stem) und braucht keine Berechnung. Die SVG-Ebene fuer Linien wird nur
+   noch auf 0 gesetzt: Mit der Groesse eines frueheren Diagramms wuerde sie
+   die Vermessung in applyZoom und beim PDF verfaelschen. */
 function drawConnectors() {
-  const svg = $("chartLines"), inner = $("chartInner");
-  const NS = "http://www.w3.org/2000/svg";
+  const svg = $("chartLines");
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  // Die Linien-Ebene liegt in derselben Flaeche, die hier vermessen wird. Mit
-  // der Groesse des vorigen Diagramms wuerde sie die Messung aufblaehen und nie
-  // wieder schrumpfen – nach einem grossen Team waere jedes kleinere zu gross
-  // vermessen (PDF-Seite mit Leerflaeche, "Einpassen" zu klein). Also vorher auf 0.
   svg.setAttribute("width", 0); svg.setAttribute("height", 0);
-  if (!inner.offsetParent && inner.offsetWidth === 0) return;
-  const w = inner.scrollWidth, h = inner.scrollHeight;
-  svg.setAttribute("width", w); svg.setAttribute("height", h);
-  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
-  const base = inner.getBoundingClientRect();
-  const line = (x1, y1, x2, y2) => {
-    const l = document.createElementNS(NS, "line");
-    l.setAttribute("x1", x1); l.setAttribute("y1", y1);
-    l.setAttribute("x2", x2); l.setAttribute("y2", y2);
-    l.setAttribute("stroke", "#000"); l.setAttribute("stroke-width", "1.5");
-    l.setAttribute("shape-rendering", "crispEdges");
-    svg.appendChild(l);
-  };
-  /* Rechteck eines Elements relativ zur Diagramm-Flaeche */
-  const R = e => {
-    const r = e.getBoundingClientRect();
-    return {
-      l: Math.round(r.left - base.left), t: Math.round(r.top - base.top),
-      r: Math.round(r.right - base.left), b: Math.round(r.bottom - base.top),
-      cx: Math.round(r.left - base.left + r.width / 2),
-      cy: Math.round(r.top - base.top + r.height / 2)
-    };
-  };
-
-  const chartEl = inner.querySelector(".ochart");
-  if (!chartEl) return;
-  const rootNode = chartEl.querySelector(".oc-root .onode");
-  const groups = chartEl.querySelector(".oc-groups");
-  if (!rootNode || !groups) return;
-
-  const gr = R(groups);
-  const spineX = gr.l + 11;          // senkrechter Strang links
-  const joinY = gr.t + 10;           // Hoehe, auf der die Wurzel andockt
-  const branches = [];               // Abzweige-Hoehen, bestimmen die Stranglaenge
-
-  // --- Zeilen mit mehreren Personen: Label links, Mitglieder nebeneinander ---
-  const grid = groups.querySelector(":scope > .oc-multi");
-  const multiLabels = grid ? Array.from(grid.children).filter(c => c.classList.contains("oc-label")) : [];
-  multiLabels.forEach(labelEl => {
-    const memEl = labelEl.nextElementSibling;
-    if (!memEl || !memEl.classList.contains("oc-members")) return;
-    const nodes = Array.from(memEl.children).filter(c => c.classList.contains("onode"));
-    if (!nodes.length) return;
-    const lab = R(labelEl);
-    const firstAv = R(nodes[0].querySelector(".avatar"));
-    const ly = lab.cy, ay = firstAv.cy;
-
-    line(spineX, ly, lab.l, ly);                       // Strang -> Label
-    if (Math.abs(ay - ly) > 2) {                       // kleine Stufe abfangen
-      const kx = lab.r + 12;
-      line(lab.r, ly, kx, ly);
-      line(kx, ly, kx, ay);
-      line(kx, ay, firstAv.l, ay);
-    } else {
-      line(lab.r, ay, firstAv.l, ay);                  // Label -> erste Person
-    }
-    for (let i = 1; i < nodes.length; i++) {           // Personen untereinander verketten
-      line(R(nodes[i - 1]).r, ay, R(nodes[i].querySelector(".avatar")).l, ay);
-    }
-    branches.push(ly);
-  });
-
-  // --- Zeile mit den Einzel-Kategorien: Label oben, Person darunter ---
-  const sing = groups.querySelector(":scope > .oc-singles");
-  if (sing) {
-    const cells = Array.from(sing.querySelectorAll(":scope > .oc-cell"));
-    const busY = R(sing).t - 16;
-    const xs = [];
-    cells.forEach(cell => {
-      const labelEl = cell.querySelector(".oc-label");
-      const av = cell.querySelector(".onode .avatar");
-      if (!labelEl || !av) return;
-      // Senkrechte laeuft mittig durch den Avatar; hinter dem weissen Label
-      // ist sie verdeckt, dadurch entsteht die Kette Bus -> Label -> Person.
-      const x = R(av).cx;
-      xs.push(x);
-      line(x, busY, x, R(av).t);
-    });
-    if (xs.length) {
-      line(spineX, busY, Math.max(...xs), busY);
-      branches.push(busY);
-    }
-  }
-
-  // --- Wurzel an den Strang anbinden ---
-  if (branches.length) {
-    const rr = R(rootNode);
-    line(rr.cx, rr.b, rr.cx, joinY);
-    line(spineX, joinY, rr.cx, joinY);
-    line(spineX, joinY, spineX, Math.max(...branches));
-  }
+  svg.removeAttribute("viewBox");
 }
 
 function applyZoom() {
@@ -1405,7 +1281,7 @@ async function captureSupplierPage(stage) {
   const boxes = chart.querySelector("svg + div");
   if (boxes) { boxes.style.position = "relative"; boxes.style.zIndex = "1"; }
   // Filter dimmen Nichttreffer – im PDF sollen alle voll sichtbar sein
-  chart.querySelectorAll(".onode.dim").forEach(n => n.classList.remove("dim"));
+  chart.querySelectorAll(".dim").forEach(n => n.classList.remove("dim"));
   page.appendChild(chart);
   page.appendChild(cloneClean(document.querySelector("#chartShell .org-foot")));
   stage.appendChild(page);
