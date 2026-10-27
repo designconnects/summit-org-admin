@@ -1,7 +1,7 @@
 # Design Summit 2026 – Org Chart Admin
 
 Auswertung der Dateien, die Lieferanten über das Formular
-(`https://designconnects.github.io/summit-org/`) herunterladen und per Mail an
+(`https://designconnects.github.io/organizational-chart/`) herunterladen und per Mail an
 designconnects@delta-sport.com schicken:
 
 **JSON-Dateien importieren → prüfen und korrigieren → Organigramm ansehen →
@@ -46,8 +46,11 @@ Dateien des Lieferanten-Formulars im falschen Repo.
   Lieferanten erst unten in der Lieferanten-Leiste umschalten. Hat der
   Lieferant noch keine Personen, sind beide Knöpfe gesperrt.
   - **Excel:** ein Blatt mit den Spalten Lieferant, Name, E-Mail, Telefon,
-    Team responsible, Kategorien, 3D Software, 2D Software, AI Software,
-    Sprachen. Lässt sich unverändert wieder importieren.
+    Responsible for Design Department, Team responsible, Team / area, Kategorien,
+    3D Software, 2D Software, AI Software,
+    Sprachen. Lässt sich unverändert wieder importieren. Ältere Excel-Dateien,
+    in denen „Team responsible" noch die Abteilungsleitung meinte, werden beim
+    Import richtig zugeordnet.
   - **PDF:** eine Seite mit dem Organigramm, oben der Firmenname (auch in
     chinesischer Schrift). Die Seite ist so groß wie das Organigramm, nichts
     wird abgeschnitten. Filter wirken nicht aufs PDF.
@@ -87,7 +90,7 @@ einem anderen Browser ist der Stand nicht da.
   letzte Eingaben nicht gespeichert, sofort sichern.
 
 **Bisherige Daten:** Hattest du den früheren Admin-Bereich
-`designconnects.github.io/summit-org/?admin` benutzt, ist dieser Stand hier
+`designconnects.github.io/summit-org/?admin` (frühere Adresse des Formulars) benutzt, ist dieser Stand hier
 automatisch da – im selben Browser. Beide Projekte liegen unter
 `designconnects.github.io` und teilen sich den Browser-Speicher.
 
@@ -119,16 +122,27 @@ ganz oben bei `FORM_URL`.
 
 ## 5. Aufbau des Organigramms
 
-- **Oben** in einem eigenen Rahmen: wer **Team responsible** angehakt hat.
-  Ist niemand markiert, steht dort der Firmenname.
-- **Eine Linie nach unten** zum Team-Block.
-- **Im Team-Block** alle übrigen Personen als einzelne Karten, drei pro
-  Zeile, alphabetisch. Bei ein oder zwei Personen entsprechend weniger
-  Spalten. Alle Karten sind gleich breit; lange Kategorielisten brechen
-  innerhalb ihres Kastens um.
-- Sind **mehrere** Personen als Team responsible markiert, steht die erste
-  oben, die anderen kommen zuerst in den Team-Block und behalten ihre
-  Kennzeichnung.
+Drei Ebenen, jeweils mit einer Linie verbunden:
+
+1. **Oben** in einem eigenen Rahmen: wer **Responsible for Design Department**
+   angehakt hat. Ist niemand markiert, steht dort der Firmenname.
+2. **Die Team-Verantwortlichen** (**Team responsible**) links und rechts außen
+   neben der Leitung, jeweils mit ihrem Bereich, z. B. „Team responsible ·
+   Baumarkt". Jede Karte hängt über eine abgewinkelte Linie an der Leitung; die
+   unterste Karte jeder Seite hat einen Strich zum Team-Block. Die erste Hälfte (nach Bereich
+   sortiert) steht links, der Rest rechts; mehrere auf einer Seite stehen
+   untereinander. Von der Leitung führt außerdem eine Mittellinie direkt zum
+   Team-Block. Gibt es keine Team-Verantwortlichen, entfällt diese Ebene.
+3. **Der Team-Block** mit allen übrigen Personen als Karten, drei pro Zeile,
+   alphabetisch. Bei ein oder zwei Personen entsprechend weniger Spalten.
+   Alle Karten sind gleich breit; lange Kategorielisten brechen innerhalb
+   ihres Kastens um.
+
+Wer zu welchem Team gehört, wird nicht erfasst – das hält das Formular für die
+Lieferanten einfach. Eine Person ist entweder Abteilungsleitung oder
+Team-Verantwortliche, nicht beides. Sind mehrere als Abteilungsleitung
+markiert, steht die erste oben, die anderen kommen in den Team-Block und
+behalten ihre Kennzeichnung.
 
 Nach Kategorien wird nicht gruppiert; die Kategorien stehen in jeder Karte.
 Die Spaltenzahl steht in `app.js` bei `TEAM_COLS`.

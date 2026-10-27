@@ -9,16 +9,18 @@
    ============================================================ */
 "use strict";
 
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.6";
 
 /* Das Lieferanten-Formular, fuer "Formular oeffnen" und "Link kopieren".
    Beide Repos liegen im selben GitHub-Konto, also wird die Adresse aus der
-   eigenen abgeleitet: <konto>.github.io/summit-org-admin/ -> .../summit-org/.
+   eigenen abgeleitet: <konto>.github.io/summit-org-admin/ -> .../organizational-chart/.
+   (Das Formular-Repo hiess frueher summit-org; nach einer Umbenennung leitet
+   GitHub Pages die alte Adresse NICHT weiter – dann hier anpassen.)
    So stimmt sie auch nach einem Kontowechsel. Nur beim lokalen Testen gilt
    die feste Adresse. */
 const FORM_URL = location.hostname.endsWith(".github.io")
-  ? location.origin + "/summit-org/"
-  : "https://designconnects.github.io/summit-org/";
+  ? location.origin + "/organizational-chart/"
+  : "https://designconnects.github.io/organizational-chart/";
 
 /* Gleiche Schluessel wie der fruehere Admin-Bereich in summit-org (?admin).
    Beide Projekte liegen unter derselben Adresse (<konto>.github.io) und teilen
@@ -73,8 +75,14 @@ const STR = {
   "f.ai":            ["AI Software", "AI-Software"],
   "f.aiPh":          ["Add more Software…", "Weitere Software…"],
   "f.optional":      ["optional", "optional"],
-  "f.lead":          ["Team responsible", "Teamverantwortlich"],
-  "f.leadHelp":      ["Without this check the person is placed as a member below the team responsible.", "Ohne diesen Haken wird die Person als Mitglied unter dem Teamverantwortlichen eingeordnet."],
+  "f.lead":          ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "f.leadHelp":      ["Leads the whole design department. Shown at the top of the chart.", "Leitet die gesamte Design-Abteilung. Steht im Organigramm ganz oben."],
+  "f.teamLead":      ["Team responsible", "Teamverantwortlich"],
+  "f.teamLeadHelp":  ["Leads a team in one area, e.g. DIY / hardware store. Shown in a row below the design department lead.", "Leitet ein Team in einem Bereich, z. B. Baumarkt. Steht in einer Zeile unter der Leitung der Design-Abteilung."],
+  "f.teamArea":      ["Team / area", "Team / Bereich"],
+  "f.teamAreaPh":    ["e.g. DIY / hardware store", "z. B. Baumarkt"],
+  "f.teamAreaErr":   ["Please enter the team or area.", "Bitte Team oder Bereich eingeben."],
+  "f.memberHelp":    ["Without either tick the person is shown as a team member.", "Ohne Haken erscheint die Person als Teammitglied."],
   "f.addTitle":      ["Add", "Hinzufügen"],
 
   "a.title":         ["Admin", "Admin"],
@@ -119,13 +127,16 @@ const STR = {
   "a.fView":         ["View", "Ansicht"],
   "a.fit":           ["Fit", "Einpassen"],
   "a.all":           ["All", "Alle"],
-  "legend.lead":     ["Team responsible", "Teamverantwortlich"],
+  "legend.lead":     ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "legend.teamLead": ["Team responsible", "Teamverantwortlich"],
   "legend.cad":      ["3D Software", "3D-Software"],
   "legend.twod":     ["2D Software", "2D-Software"],
   "legend.ai":       ["AI Software", "AI-Software"],
   "legend.lang":     ["Languages", "Sprachen"],
   "chart.sub":       ["ORGANISATION CHART · DESIGN", "ORGANIGRAMM · DESIGN"],
-  "chart.role":      ["Team responsible", "Teamverantwortlich"],
+  "chart.role":      ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "chart.teamRole":  ["Team responsible · {area}", "Teamverantwortlich · {area}"],
+  "chart.teamRole0": ["Team responsible", "Teamverantwortlich"],
 
   "a.autosaveText":  ["Stored in this browser automatically.", "Wird automatisch in diesem Browser gespeichert."],
   "a.lastSaved":     ["Last saved: {time}", "Zuletzt gespeichert: {time}"],
@@ -211,7 +222,9 @@ const STR = {
   "x.name":          ["Name", "Name"],
   "x.email":         ["Email", "E-Mail"],
   "x.phone":         ["Phone / Mobile", "Telefon / Mobil"],
-  "x.lead":          ["Team responsible", "Teamverantwortlich"],
+  "x.lead":          ["Responsible for Design Department", "Verantwortlich für die Design-Abteilung"],
+  "x.teamLead":      ["Team responsible", "Teamverantwortlich"],
+  "x.teamArea":      ["Team / area", "Team / Bereich"],
   "x.cats":          ["Categories", "Kategorien"],
   "x.cad":           ["3D Software", "3D-Software"],
   "x.twoD":          ["2D Software", "2D-Software"],
@@ -480,6 +493,9 @@ function normEmp(x) {
     ai: Array.isArray(x.ai) ? x.ai : [],
     languages: langs,
     isLead: !!x.isLead,
+    // Team-Verantwortung mit Bereich (z. B. Baumarkt); aeltere Dateien haben sie nicht
+    isTeamLead: !!x.isTeamLead && !x.isLead,
+    teamArea: x.isTeamLead && !x.isLead ? String(x.teamArea || "") : "",
     id: x.id || uid("emp")
   };
 }
@@ -487,7 +503,8 @@ function cleanEmp(supId) {
   return e => ({
     name: e.name, email: e.email || "", phone: e.phone || "",
     categories: e.categories || [], cad: e.cad || [], twoD: e.twoD || [], ai: e.ai || [],
-    languages: e.languages || [], isLead: !!e.isLead, supplierId: supId, id: e.id
+    languages: e.languages || [], isLead: !!e.isLead,
+    isTeamLead: !!e.isTeamLead, teamArea: e.teamArea || "", supplierId: supId, id: e.id
   });
 }
 function mergePools(cats, cads, twoDs, ais, langs) {
@@ -503,7 +520,8 @@ function mergePools(cats, cads, twoDs, ais, langs) {
    ============================================================ */
 
 function blankDraft() {
-  return { name: "", email: "", phone: "", categories: [], cad: [], twoD: [], ai: [], languages: [], isLead: false };
+  return { name: "", email: "", phone: "", categories: [], cad: [], twoD: [], ai: [], languages: [],
+           isLead: false, isTeamLead: false, teamArea: "" };
 }
 let draft = blankDraft();
 let editingId = null;
@@ -577,16 +595,41 @@ function buildMemberForm() {
     pillGroup("f.ai",    "f.aiPh",    "availableAi",         "ai",         "ai")
   ];
 
-  const lead = el("div", "lead-box");
-  const cb = el("span", "cb");
-  cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  lead.appendChild(cb);
-  lead.appendChild(el("span", "txt", t("f.lead")));
-  lead.setAttribute("role", "checkbox");
-  lead.onclick = () => { draft.isLead = !draft.isLead; renderFormState(); };
-  wrap.appendChild(lead);
-  wrap.appendChild(el("div", "help", t("f.leadHelp")));
-  FE.lead = lead;
+  /* Zwei Rollen, die sich ausschliessen: Leitung der Design-Abteilung (steht
+     ganz oben) oder Leitung eines Teams in einem Bereich (eigene Zeile darunter). */
+  const roleBox = (labelKey, helpKey, onToggle) => {
+    const box = el("div", "lead-box");
+    const cb = el("span", "cb");
+    cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    box.appendChild(cb);
+    box.appendChild(el("span", "txt", t(labelKey)));
+    box.setAttribute("role", "checkbox");
+    box.onclick = () => { onToggle(); renderFormState(); };
+    wrap.appendChild(box);
+    wrap.appendChild(el("div", "help", t(helpKey)));
+    return box;
+  };
+  FE.lead = roleBox("f.lead", "f.leadHelp", () => {
+    draft.isLead = !draft.isLead;
+    if (draft.isLead) draft.isTeamLead = false;
+  });
+  FE.teamLead = roleBox("f.teamLead", "f.teamLeadHelp", () => {
+    draft.isTeamLead = !draft.isTeamLead;
+    if (draft.isTeamLead) { draft.isLead = false; setTimeout(() => FE.teamArea.focus(), 60); }
+  });
+
+  // Bereich des Teams, nur sichtbar bei "Team responsible"
+  const areaF = el("div", "field team-area");
+  const areaLab = el("label", "flabel", t("f.teamArea"));
+  FE.teamArea = document.createElement("input");
+  FE.teamArea.type = "text"; FE.teamArea.placeholder = t("f.teamAreaPh"); FE.teamArea.autocomplete = "off";
+  areaLab.htmlFor = FE.teamArea.id = "fld_teamArea";
+  FE.teamAreaErr = el("div", "err", t("f.teamAreaErr"));
+  areaF.appendChild(areaLab); areaF.appendChild(FE.teamArea); areaF.appendChild(FE.teamAreaErr);
+  wrap.appendChild(areaF);
+  FE.teamAreaField = areaF;
+  FE.teamArea.oninput = e => { draft.teamArea = e.target.value; FE.teamAreaErr.classList.remove("show"); };
+  wrap.appendChild(el("div", "help", t("f.memberHelp")));
 
   FE.name.oninput  = e => { draft.name = e.target.value; if (draft.name.trim()) FE.nameErr.classList.remove("show"); };
   FE.email.oninput = e => { draft.email = e.target.value; FE.emailErr.classList.remove("show"); };
@@ -624,6 +667,10 @@ function renderFormState() {
   });
   FE.lead.classList.toggle("on", !!draft.isLead);
   FE.lead.setAttribute("aria-checked", draft.isLead ? "true" : "false");
+  FE.teamLead.classList.toggle("on", !!draft.isTeamLead);
+  FE.teamLead.setAttribute("aria-checked", draft.isTeamLead ? "true" : "false");
+  FE.teamAreaField.classList.toggle("hidden", !draft.isTeamLead);
+  FE.teamArea.value = draft.teamArea || "";
   syncFormLabels();
 }
 
@@ -650,6 +697,14 @@ function validateDraft() {
     FE.email.scrollIntoView({ block: "center", behavior: "smooth" });
     return false;
   }
+  // Ohne Bereich ist "Team responsible" im Organigramm nicht zuzuordnen
+  draft.teamArea = (FE.teamArea.value || "").trim();
+  if (draft.isTeamLead && !draft.teamArea) {
+    FE.teamAreaErr.classList.add("show");
+    FE.teamArea.focus();
+    FE.teamArea.scrollIntoView({ block: "center", behavior: "smooth" });
+    return false;
+  }
   return true;
 }
 
@@ -660,14 +715,16 @@ function commitDraft(sup) {
     Object.assign(existing, {
       name: draft.name, email: draft.email, phone: draft.phone,
       categories: [...draft.categories], cad: [...draft.cad], twoD: [...draft.twoD],
-      ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead
+      ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead,
+      isTeamLead: draft.isTeamLead, teamArea: draft.isTeamLead ? draft.teamArea.trim() : ""
     });
     return { emp: existing, isNew: false };
   }
   const emp = {
     name: draft.name, email: draft.email, phone: draft.phone,
     categories: [...draft.categories], cad: [...draft.cad], twoD: [...draft.twoD],
-    ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead, id: uid("emp")
+    ai: [...draft.ai], languages: [...draft.languages], isLead: draft.isLead,
+      isTeamLead: draft.isTeamLead, teamArea: draft.isTeamLead ? draft.teamArea.trim() : "", id: uid("emp")
   };
   sup.employees.push(emp);
   return { emp, isNew: true };
@@ -677,6 +734,11 @@ function commitDraft(sup) {
    5. Personenkarten, Bearbeiten, Loeschen
    ============================================================ */
 
+function teamRoleText(emp) {
+  const area = (emp.teamArea || "").trim();
+  return area ? t("chart.teamRole", { area }) : t("chart.teamRole0");
+}
+
 function memberCard(emp) {
   const row = el("div", "member" + (emp.isLead ? " is-lead" : ""));
   const main = el("div", "m-main");
@@ -685,6 +747,7 @@ function memberCard(emp) {
   if (emp.phone) main.appendChild(el("div", "m-meta", emp.phone));
   const tags = el("div", "m-tags");
   if (emp.isLead) tags.appendChild(el("span", "tag lead", t("chart.role")));
+  if (emp.isTeamLead) tags.appendChild(el("span", "tag teamlead", teamRoleText(emp)));
   (emp.languages || []).forEach(v => tags.appendChild(el("span", "tag lang", v)));
   (emp.categories || []).forEach(v => tags.appendChild(el("span", "tag cat", v)));
   (emp.cad || []).forEach(v => tags.appendChild(el("span", "tag cad", v)));
@@ -718,7 +781,8 @@ function startEdit(id) {
   draft = {
     name: e.name || "", email: e.email || "", phone: e.phone || "",
     categories: [...(e.categories || [])], cad: [...(e.cad || [])], twoD: [...(e.twoD || [])],
-    ai: [...(e.ai || [])], languages: [...(e.languages || [])], isLead: !!e.isLead
+    ai: [...(e.ai || [])], languages: [...(e.languages || [])], isLead: !!e.isLead,
+    isTeamLead: !!e.isTeamLead, teamArea: e.teamArea || ""
   };
   adminTab("members");
   mountForm($("aFormHost"));
@@ -998,6 +1062,7 @@ function empNode(emp, isRoot, active) {
   if (emp.email) f.appendChild(fbox("mail", emp.email));
   if (emp.phone) f.appendChild(fbox("phone", emp.phone));
   if (emp.isLead) f.appendChild(fbox("role", t("chart.role")));
+  if (emp.isTeamLead) f.appendChild(fbox("role teamrole", teamRoleText(emp)));
   const cats = emp.categories || [], cads = emp.cad || [];
   if (cats.length || cads.length) {
     const r = el("div", "frow");
@@ -1034,13 +1099,17 @@ function companyNode(sup) {
 }
 
 /* ---- Aufbau ----
-   Oben die Teamleitung (wer "Team responsible" angehakt hat) in einem eigenen
-   Rahmen, darunter eine Linie zum Team-Block: alle uebrigen Personen als
-   einzelne Karten im Raster, alphabetisch. Nach Kategorien wird nicht mehr
-   gruppiert – die Kategorien stehen in jeder Karte.
-   Ist niemand als Teamleitung markiert, steht oben der Firmenname. Sind
-   mehrere markiert, steht die erste oben; die anderen kommen zuerst in den
-   Team-Block und behalten ihre Kennzeichnung. */
+   Drei Ebenen, jeweils mit einer Linie verbunden:
+   1. Leitung der Design-Abteilung ("Responsible for Design Department") in
+      einem eigenen Rahmen. Ist niemand markiert, steht dort der Firmenname.
+   2. Die Team-Verantwortlichen ("Team responsible") links und rechts aussen,
+      jeweils mit ihrem Bereich, per Winkel-Linie an der Leitung. Entfaellt ohne sie.
+   3. Der Team-Block: alle uebrigen Personen als Karten im Raster, alphabetisch.
+   Wer zu welchem Team gehoert, wird bewusst nicht erfasst – das haelt das
+   Formular fuer die Lieferanten einfach. Nach Kategorien wird nicht gruppiert,
+   die Kategorien stehen in jeder Karte.
+   Sind mehrere als Abteilungsleitung markiert, steht die erste oben; die
+   anderen kommen zuerst in den Team-Block und behalten ihre Kennzeichnung. */
 const TEAM_COLS = 3;     // Karten je Zeile im Team-Block
 
 /* Filter dimmen die ganze Karte samt Rahmen, nicht nur den Inhalt */
@@ -1071,17 +1140,36 @@ function renderChart() {
   const active = !!(filters.cat || filters.cad || filters.twoD || filters.ai || filters.search);
   const sorted = sortedEmployees(sup);
   const lead = sorted.find(e => e.isLead) || null;
-  const team = sorted.filter(e => e !== lead);
+  // Team-Verantwortliche nach Bereich, dann Name – gleiche Bereiche stehen beieinander
+  const teamLeads = sorted.filter(e => e !== lead && e.isTeamLead)
+    .sort((a, b) => (a.teamArea || "").localeCompare(b.teamArea || "") || nameOr(a.name).localeCompare(nameOr(b.name)));
+  const team = sorted.filter(e => e !== lead && !teamLeads.includes(e));
 
   const wrap = el("div", "ochart");
   wrap.appendChild(moveDim(lead ? empNode(lead, true, active) : companyNode(sup), el("div", "oc-lead")));
 
+  if (teamLeads.length) {
+    // Team-Verantwortliche nach aussen: erste Haelfte links, Rest rechts, mehrere
+    // auf einer Seite untereinander. Das Raster (.has-tl im CSS) haelt sie neben
+    // der Leitung, nie darunter. Die Linien zeichnet drawConnectors().
+    wrap.classList.add("has-tl");
+    const left = el("div", "oc-side left"), right = el("div", "oc-side right");
+    const half = Math.ceil(teamLeads.length / 2);
+    teamLeads.forEach((m, i) => (i < half ? left : right).appendChild(moveDim(empNode(m, false, active), el("div", "oc-tl"))));
+    wrap.appendChild(left); wrap.appendChild(right);
+  }
+
   if (team.length) {
-    wrap.appendChild(el("div", "oc-stem"));
+    if (!teamLeads.length) wrap.appendChild(el("div", "oc-stem"));
+    // Rahmen und Raster getrennt: Der Rahmen kann ueber die volle Breite gehen
+    // (damit die Linien der Team-Verantwortlichen auf ihm landen), die Karten
+    // bleiben trotzdem gleich breit und mittig.
     const block = el("div", "oc-team");
+    const grid = el("div", "oc-grid");
     // Bei kleinen Teams nicht mehr Spalten als Personen, sonst bleiben Luecken
-    block.style.gridTemplateColumns = "repeat(" + Math.min(TEAM_COLS, team.length) + ", 1fr)";
-    team.forEach(m => block.appendChild(moveDim(empNode(m, false, active), el("div", "oc-card"))));
+    grid.style.gridTemplateColumns = "repeat(" + Math.min(TEAM_COLS, team.length) + ", 1fr)";
+    team.forEach(m => grid.appendChild(moveDim(empNode(m, false, active), el("div", "oc-card"))));
+    block.appendChild(grid);
     wrap.appendChild(block);
   }
   chart.appendChild(wrap);
@@ -1092,15 +1180,62 @@ function renderChart() {
   renderChart._t = setTimeout(applyZoom, 120);
 }
 
-/* Die einzige Verbindung (Teamleitung -> Team-Block) ist jetzt ein Element
-   (.oc-stem) und braucht keine Berechnung. Die SVG-Ebene fuer Linien wird nur
-   noch auf 0 gesetzt: Mit der Groesse eines frueheren Diagramms wuerde sie
-   die Vermessung in applyZoom und beim PDF verfaelschen. */
+/* Linien fuer den Aufbau mit Team-Verantwortlichen (ohne sie reicht das
+   einfache Element .oc-stem):
+   - Stamm: Abteilungsleitung, Mitte unten -> Team-Block, senkrecht.
+   - Je Team-Verantwortlichem ein Winkel: bei 1/4 bzw. 3/4 der Leitungs-Karte
+     nach unten bis zur Kartenmitte, dann waagerecht in die Innenseite der Karte.
+     Liegt die Karte so weit innen, dass sie unter der Leitung steht, geht die
+     Linie stattdessen gerade von oben hinein.
+   - Von der untersten Karte jeder Seite eine Linie hinunter zum Team-Block.
+   Vor dem Messen wird die Ebene auf 0 gesetzt: Mit der Groesse eines frueheren
+   Diagramms wuerde sie die Vermessung in applyZoom und beim PDF aufblaehen. */
 function drawConnectors() {
-  const svg = $("chartLines");
+  const svg = $("chartLines"), area = $("chartInner");
+  const NS = "http://www.w3.org/2000/svg";
   while (svg.firstChild) svg.removeChild(svg.firstChild);
   svg.setAttribute("width", 0); svg.setAttribute("height", 0);
   svg.removeAttribute("viewBox");
+  const chartEl = area.querySelector(".ochart.has-tl");
+  if (!chartEl || (!area.offsetParent && area.offsetWidth === 0)) return;
+
+  const w = area.scrollWidth, h = area.scrollHeight;
+  svg.setAttribute("width", w); svg.setAttribute("height", h);
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+  const base = area.getBoundingClientRect();
+  const R = e => {
+    const r = e.getBoundingClientRect();
+    return { l: r.left - base.left, r: r.right - base.left, t: r.top - base.top, b: r.bottom - base.top,
+             cx: r.left - base.left + r.width / 2, cy: r.top - base.top + r.height / 2 };
+  };
+  const line = pts => {
+    const p = document.createElementNS(NS, "polyline");
+    p.setAttribute("points", pts.map(([x, y]) => Math.round(x) + "," + Math.round(y)).join(" "));
+    p.setAttribute("fill", "none"); p.setAttribute("stroke", "#000"); p.setAttribute("stroke-width", "3");
+    p.setAttribute("stroke-linejoin", "miter"); p.setAttribute("stroke-linecap", "square");
+    svg.appendChild(p);
+  };
+
+  const head = R(chartEl.querySelector(".oc-lead"));
+  const blockEl = chartEl.querySelector(".oc-team");
+  const block = blockEl ? R(blockEl) : null;
+  if (block) line([[head.cx, head.b], [head.cx, block.t]]);
+
+  [["left", 0.25], ["right", 0.75]].forEach(([side, f]) => {
+    const cards = [...chartEl.querySelectorAll(".oc-side." + side + " > .oc-tl")].map(R);
+    if (!cards.length) return;
+    const x = head.l + (head.r - head.l) * f;
+    cards.forEach(c => {
+      const edge = side === "left" ? c.r : c.l;
+      const under = side === "left" ? edge > x - 12 : edge < x + 12;
+      if (under) line([[x, head.b], [x, c.t]]);
+      else line([[x, head.b], [x, c.cy], [edge, c.cy]]);
+    });
+    if (block) {
+      const last = cards[cards.length - 1];
+      line([[last.cx, last.b], [last.cx, block.t]]);
+    }
+  });
 }
 
 function applyZoom() {
@@ -1159,6 +1294,7 @@ function setScale(v) { fitMode = false; currentScale = Math.max(0.15, Math.min(2
 
 function empRow(e) {
   return [nameOr(e.name), e.email || "", e.phone || "", e.isLead ? t("x.yes") : "",
+    e.isTeamLead ? t("x.yes") : "", e.isTeamLead ? (e.teamArea || "") : "",
     (e.categories || []).join(", "), (e.cad || []).join(", "),
     (e.twoD || []).join(", "), (e.ai || []).join(", "), (e.languages || []).join(", ")];
 }
@@ -1172,7 +1308,7 @@ async function exportExcel() {
   if (!sup || !sup.employees.length) { toast(t("t.noData")); return; }
   // Lieferanten-Spalte bleibt drin: Beim Wiedereinlesen ordnet der Import die
   // Zeilen darueber zu – der Blattname waere auf 31 Zeichen gekuerzt.
-  const head = [t("x.supplier"), t("x.name"), t("x.email"), t("x.phone"), t("x.lead"),
+  const head = [t("x.supplier"), t("x.name"), t("x.email"), t("x.phone"), t("x.lead"), t("x.teamLead"), t("x.teamArea"),
                 t("x.cats"), t("x.cad"), t("x.twoD"), t("x.ai"), t("x.langs")];
   const rowsAll = [head];
   sortedEmployees(sup).forEach(e => rowsAll.push([nameOr(sup.name), ...empRow(e)]));
@@ -1180,7 +1316,7 @@ async function exportExcel() {
   if (typeof XLSX !== "undefined") {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rowsAll);
-    ws["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
+    ws["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 16 }];
     // Blattnamen: max. 31 Zeichen, ohne \ / ? * [ ] :
     const sheet = nameOr(sup.name).replace(/[\\\/\?\*\[\]:]/g, " ").trim().slice(0, 31) || "Supplier";
     XLSX.utils.book_append_sheet(wb, ws, sheet);
@@ -1464,14 +1600,19 @@ function importExcelFile(file) {
         if (hIdx < 0) hIdx = 0;
         const header = aoa[hIdx].map(norm);
         const col = names => { for (const n of names) { const i = header.indexOf(n); if (i >= 0) return i; } return -1; };
+        /* "Team responsible" war bis zur Umbenennung der Kopf fuer die Abteilungs-
+           leitung, heute ist es die Team-Verantwortung. Steht die neue Abteilungs-
+           Spalte in der Datei, ist es eine neue Datei; sonst eine alte, und
+           "Team responsible" meint die Abteilungsleitung. */
+        const leadNew = col(["responsible for design department", "verantwortlich für die design-abteilung"]);
         const ci = {
           sup:  col(["lieferant", "supplier"]),
           name: col(["name"]),
           email: col(["e-mail", "email", "mail"]),
           phone: col(["phone / mobile", "telefon / mobil", "telefon", "mobil", "phone", "tel", "mobile", "firmen-telefon", "firmen telefon"]),
-          // Alte Spaltenkoepfe bleiben gueltig, damit vor der Umbenennung
-          // exportierte Dateien weiter einlesbar sind.
-          lead: col(["teamverantwortlich", "team responsible", "teamleiter", "lead", "team leader"]),
+          lead: leadNew >= 0 ? leadNew : col(["teamverantwortlich", "team responsible", "teamleiter", "lead", "team leader"]),
+          teamLead: leadNew >= 0 ? col(["team responsible", "teamverantwortlich"]) : -1,
+          teamArea: col(["team / area", "team / bereich", "team area", "team-bereich", "bereich", "area"]),
           cat:  col(["kern-kategorien", "core categories", "kategorien", "kategorie", "categories", "category"]),
           cad:  col(["3d-software", "3d software", "3d", "cad-software", "cad", "cad software"]),
           twoD: col(["2d-software", "2d", "2d software", "twod"]),
@@ -1495,7 +1636,9 @@ function importExcelFile(file) {
             twoD: ci.twoD >= 0 ? splitList(row[ci.twoD]) : [],
             ai: ci.ai >= 0 ? splitList(row[ci.ai]) : [],
             languages,
-            isLead: ci.lead >= 0 ? truthy(row[ci.lead]) : false
+            isLead: ci.lead >= 0 ? truthy(row[ci.lead]) : false,
+            isTeamLead: ci.teamLead >= 0 ? truthy(row[ci.teamLead]) : false,
+            teamArea: ci.teamArea >= 0 ? String(row[ci.teamArea] || "").trim() : ""
           });
           count++;
         }
