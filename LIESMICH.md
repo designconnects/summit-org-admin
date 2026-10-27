@@ -149,3 +149,20 @@ Die Spaltenzahl steht in `app.js` bei `TEAM_COLS`.
 
 Filter blenden nicht passende Karten ab, entfernen sie aber nicht. Das PDF
 zeigt immer alle Karten voll.
+
+---
+
+## 6. Kategorien
+
+Im Formular stehen nur englische Kategorien zur Auswahl. Deutsche Namen, z. B.
+aus älteren Excel-Dateien („Spielzeug", „Garten & Freizeit" …), werden nicht
+mehr angeboten – weder nach dem Laden noch nach einem Import oder dem
+Wiederherstellen einer Sicherung.
+
+Personen, die einen solchen Begriff schon tragen, **behalten** ihn: er steht
+weiter auf der Karte, im Organigramm und in Excel, und beim Bearbeiten ist er
+als angewählter Knopf zu sehen. Wird er dort abgewählt, ist er weg. Im Filter
+„Category" bleibt er auswählbar, solange ihn noch jemand trägt.
+
+Die Liste der ausgeblendeten Begriffe steht in `app.js` ganz oben bei
+`HIDDEN_CATEGORIES`.
